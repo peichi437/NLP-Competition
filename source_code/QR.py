@@ -7,8 +7,10 @@ from transformers import AdamW
 import os
 import numpy as np, pandas as pd
 
-from .utils import get_output_post_fn, acc
-from .dataset import qrDataset
+import sys, os
+sys.path.insert(1, os.path.join(sys.path[0], "../source_code"))
+from utils import get_output_post_fn, acc
+from dataset import qrDataset
 
 class QR:
     def __init__(self, **args):
@@ -18,11 +20,13 @@ class QR:
         self.lr = args['lr']
         self.epochs = args['epochs']
         self.work_dir = args['work_dir']
-        self.submit_file = args['submit_file']
+        self.submit_csv = args['submit_csv']
         self.model_name = args['model_name']
+        self.batch_size = args['bsz']
 
     def train_one_epoch(self, dataloader, model, opt, loss_fct, epoch):
         running_loss = 0.0
+        running_len = 0
         loop = tqdm(dataloader, leave=True)
         for batch_id, batch in enumerate(loop):
             # reset
@@ -32,12 +36,15 @@ class QR:
             input_ids = batch['input_ids'].to(self.device)
             attention_mask = batch['attention_mask'].to(self.device)
 
+            try: token_type_ids = batch['token_type_ids'].to(self.device)
+            except: token_type_ids=None
+
             q_start = batch['q_start'].to(self.device)
             r_start = batch['r_start'].to(self.device)
             q_end = batch['q_end'].to(self.device)
             r_end = batch['r_end'].to(self.device)
 
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
 
             q_start_logits, r_start_logits, q_end_logits, r_end_logits = torch.split(outputs, 1, 2)
 
@@ -58,18 +65,21 @@ class QR:
             # update parameters
             opt.step()
 
-            running_loss += loss.item()
+            running_loss += loss.item() * q_end.shape[0]
+            running_len += q_end.shape[0]
+
             if batch_id % 50 == 0 and batch_id != 0:
                 print('Epoch {} Batch {} Loss {:.4f}'.format(
                     batch_id + 1, batch_id, running_loss / 50))
             loop.set_description(f'Epoch {epoch}')
             loop.set_postfix(loss=loss.item())
 
-        print(f"Training_loss: {running_loss}")
+        print(f"Training_loss: {running_loss/running_len}")
 
         return model
     
     def fit(self, train_loader, valid_loader, test_loader, test, model):
+        if not os.path.exists(os.path.join(self.work_dir, 'models')): os.mkdir(os.path.join(self.work_dir, 'models'))
         # Optim
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
@@ -92,8 +102,9 @@ class QR:
                     dataloader=train_loader,
                     model=model,
                     opt=opt,
-                    loss_fct=loss_fct
-                    )  # type: ignore
+                    loss_fct=loss_fct,
+                    epoch=epoch
+                    )
                 
             valid_loss = self.evaluate(valid_loader, model, loss_fct=loss_fct)
             if valid_loss < valid_loss_min:
@@ -130,13 +141,16 @@ class QR:
             for batch_id, batch in enumerate(loop):
                 input_ids = batch['input_ids'].to(self.device)
                 attention_mask = batch['attention_mask'].to(self.device)
+                try: token_type_ids = batch['token_type_ids'].to(self.device)
+                except: token_type_ids=None
+
 
                 q_start = batch['q_start'].to(self.device)
                 r_start = batch['r_start'].to(self.device)
                 q_end = batch['q_end'].to(self.device)
                 r_end = batch['r_end'].to(self.device)
 
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
 
                 q_start_logits, r_start_logits, q_end_logits, r_end_logits = torch.split(outputs, 1, 2)
 
@@ -170,38 +184,43 @@ class QR:
 
         q_sub_output, r_sub_output = [],[]
 
-        loop = tqdm(dataloader, leave=True)
-        for batch_id, batch in enumerate(loop):
-            input_ids = batch['input_ids'].to(self.device)
-            attention_mask = batch['attention_mask'].to(self.device)
-
-
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-
-            q_start_logits, r_start_logits, q_end_logits, r_end_logits = torch.split(outputs, 1, 2)
-
-            q_start_logits = q_start_logits.squeeze(-1).contiguous()
-            r_start_logits = r_start_logits.squeeze(-1).contiguous()
-            q_end_logits = q_end_logits.squeeze(-1).contiguous()
-            r_end_logits = r_end_logits.squeeze(-1).contiguous()
-
-            q_start_prdict = torch.argmax(q_start_logits, 1).cpu().numpy()
-            r_start_prdict = torch.argmax(r_start_logits, 1).cpu().numpy()
-            q_end_prdict = torch.argmax(q_end_logits, 1).cpu().numpy()
-            r_end_prdict = torch.argmax(r_end_logits, 1).cpu().numpy()
-
-            for i in range(len(input_ids)):
-                predict_pos.append((q_start_prdict[i].item(), r_start_prdict[i].item(), q_end_prdict[i].item(), r_end_prdict[i].item()))
-
-                q_sub = self.tokenizer.decode(input_ids[i][q_start_prdict[i]:q_end_prdict[i]+1])
-                r_sub = self.tokenizer.decode(input_ids[i][r_start_prdict[i]:r_end_prdict[i]+1])
+        with torch.no_grad():
+            loop = tqdm(dataloader, leave=True)
+            for batch_id, batch in enumerate(loop):
+                input_ids = batch['input_ids'].to(self.device)
+                attention_mask = batch['attention_mask'].to(self.device)
+                try: token_type_ids = batch['token_type_ids'].to(self.device)
+                except: token_type_ids=None
                 
-                q_sub_output.append(q_sub)
-                r_sub_output.append(r_sub)
+
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+
+                q_start_logits, r_start_logits, q_end_logits, r_end_logits = torch.split(outputs, 1, 2)
+
+                q_start_logits = q_start_logits.squeeze(-1).contiguous()
+                r_start_logits = r_start_logits.squeeze(-1).contiguous()
+                q_end_logits = q_end_logits.squeeze(-1).contiguous()
+                r_end_logits = r_end_logits.squeeze(-1).contiguous()
+
+                q_start_prdict = torch.argmax(q_start_logits, 1).cpu().numpy()
+                r_start_prdict = torch.argmax(r_start_logits, 1).cpu().numpy()
+                q_end_prdict = torch.argmax(q_end_logits, 1).cpu().numpy()
+                r_end_prdict = torch.argmax(r_end_logits, 1).cpu().numpy()
+
+                for i in range(len(input_ids)):
+                    predict_pos.append((q_start_prdict[i].item(), r_start_prdict[i].item(), q_end_prdict[i].item(), r_end_prdict[i].item()))
+
+                    q_sub = self.tokenizer.decode(input_ids[i][q_start_prdict[i]:q_end_prdict[i]+1])
+                    r_sub = self.tokenizer.decode(input_ids[i][r_start_prdict[i]:r_end_prdict[i]+1])
+                    
+                    q_sub_output.append(q_sub)
+                    r_sub_output.append(r_sub)
         return q_sub_output, r_sub_output, predict_pos
     
     def submit(self, model):
-        df=pd.read_csv(os.path.join(self.work_dir, self.submit_file), encoding = "ISO-8859-1")
+        if not os.path.exists(os.path.join(self.work_dir, 'results')): os.mkdir(os.path.join(self.work_dir, 'results'))
+        
+        df=pd.read_csv(os.path.join(self.work_dir, self.submit_csv), encoding = "ISO-8859-1")
 
         df[['q','r']] = df[['q','r']].apply(lambda x: x.str.strip('\"'))
         df['r'] = df['s'] + ':' + df['r']

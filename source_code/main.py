@@ -4,9 +4,13 @@ import torch
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
-from .utils import *
-from .QR import QR
-from .dataset import qrDataset
+import sys, os
+sys.path.insert(1, os.path.join(sys.path[0], "../source_code"))
+
+from utils import *
+from QR import QR
+from dataset import qrDataset
+from model import *
 
 # ARGS
 def parse_arguments(arguments=None):
@@ -17,31 +21,31 @@ def parse_arguments(arguments=None):
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work_dir', type=str, default="C:/Users/user/Downloads/Competition")
-    parser.add_argument('--train_file', type=str, default="Batch_answers - train_data (no-blank).csv")
-    parser.add_argument('--submit_file', type=str, default="Batch_answers - test_data(no_label).csv")
+    parser.add_argument('--work_dir', type=str, default="C:\\Users\\user\\Documents\\Competition")
+    parser.add_argument('--train_csv', type=str, default="Batch_answers - train_data (no-blank).csv")
+    parser.add_argument('--submit_csv', type=str, default="Batch_answers - test_data(no_label).csv")
     parser.add_argument('--model_name', type=str, default="Bert")
     parser.add_argument('--tokenizer', type=str, default="bert-base-cased")
     parser.add_argument('--bsz', type=int, default=8, help='batch size')
-    parser.add_argument('--epochs', type=int, default=1, help='')
-    parser.add_argument('--lr', type=float, default=3e-4)
+    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--lr', type=float, default=3e-5)
+    parser.add_argument('--seed', type=int, default=2022)
 
     return parser.parse_args(args=arguments)
 
 # MAIN
 def main(**args):
+
     torch.clear_autocast_cache()
     torch.cuda.empty_cache()
 
-    kwargs = argparse.Namespace(args)
+    kwargs = argparse.Namespace(**args)
 
     ##### HYPERPARAMS
     seed = kwargs.seed
     device = "cuda:0"
     work_dir = kwargs.work_dir
     train_csv = kwargs.train_csv
-    epochs = kwargs.epochs
-    lr = kwargs.lr
     batch_size = kwargs.bsz
     model_name = kwargs.model_name
     tokenizer = kwargs.tokenizer
