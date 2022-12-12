@@ -1,9 +1,8 @@
 # NLP-Competition
 # Requirements
-
-torch
-pandas
-nltk
+torch \
+pandas \
+nltk \
 transformer
 # Models (Put in model_name)
 Bert, GPT2, Roberta, DistilBert, Luke
