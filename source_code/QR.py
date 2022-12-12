@@ -4,6 +4,7 @@ from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from transformers import AdamW
 
+import wandb
 import numpy as np, pandas as pd
 
 import sys, os
@@ -26,7 +27,6 @@ class QR:
     def train_one_epoch(self, dataloader, valid_loader, model, opt, loss_fct, epoch):
         running_loss = 0.0
         running_len = 0
-        valid_loss_min = np.inf
         loop = tqdm(dataloader, leave=True)
         for batch_id, batch in enumerate(loop):
             # reset
@@ -72,10 +72,7 @@ class QR:
                 print('Epoch {} Batch {} Loss {:.4f}'.format(
                     batch_id + 1, batch_id, running_loss / 50))
 
-                valid_loss = self.evaluate(valid_loader, model, loss_fct=loss_fct)
-                if valid_loss < valid_loss_min:
-                    valid_loss_min = valid_loss
-                    torch.save({"epoch":epoch, "model":model.state_dict()}, os.path.join(self.work_dir, 'models', self.model_name))
+                wandb.log({"Batch loss": loss.item()/q_end.shape[0]})
 
             loop.set_description(f'Epoch {epoch}')
             loop.set_postfix(loss=loss.item())
@@ -88,7 +85,8 @@ class QR:
         if not os.path.exists(os.path.join(self.work_dir, 'models')): os.mkdir(os.path.join(self.work_dir, 'models'))
         # Optim
         opt = AdamW(model.parameters(), lr=self.lr)
-        loss_fct = CrossEntropyLoss(label_smoothing=0.1)
+        loss_fct = CrossEntropyLoss()
+        valid_loss_min = np.inf
 
         for epoch in range(1, self.epochs+1):
             model.train()
@@ -101,6 +99,11 @@ class QR:
                     loss_fct=loss_fct,
                     epoch=epoch
                     )
+            valid_loss = self.evaluate(valid_loader, model, loss_fct=loss_fct)
+            wandb.log({"Validation loss":valid_loss})
+            if valid_loss < valid_loss_min:
+                valid_loss_min = valid_loss
+                torch.save({"epoch":epoch, "model":model.state_dict()}, os.path.join(self.work_dir, 'models', self.model_name))
 
 
         model.load_state_dict(torch.load(os.path.join(self.work_dir, 'models', self.model_name))['model'])
@@ -124,6 +127,7 @@ class QR:
 
         print("q accuracy: ", q_acc_sum/test.shape[0])
         print("r accuracy: ", r_acc_sum/test.shape[0])
+        wandb.log({"q_acc":q_acc_sum/test.shape[0], "r_acc":r_acc_sum/test.shape[0]})
 
     def evaluate(self, dataloader, model, loss_fct):
         model.eval()

@@ -1,6 +1,8 @@
 import argparse
 import torch
 
+import wandb
+
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
@@ -35,6 +37,8 @@ def parse_arguments(arguments=None):
 
 # MAIN
 def main(**args):
+    os.environ['WANDB_API_KEY'] = "1ce6f52a9031395a3d60863642bcac6ef3d0f3ac"
+
     torch.clear_autocast_cache()
     torch.cuda.empty_cache()
 
@@ -49,6 +53,10 @@ def main(**args):
     model_name = kwargs.model_name
     tokenizer = kwargs.tokenizer
 
+    wandb.init(project="NLP-Competition_E1", entity="pcl43700", name=model_name+"-"+tokenizer)
+    wandb.log(args)
+
+
     # Set Seed
     set_seed_1(seed=seed)
     # Set GPU / CPU
@@ -58,6 +66,7 @@ def main(**args):
 
     ##### LOAD DATA
     df=pd.read_csv(os.path.join(work_dir, train_csv), encoding = "ISO-8859-1")
+    
     data = preprocessing(df=df)
 
     ##### SPLIT
@@ -119,6 +128,7 @@ def main(**args):
     qr.submit(
         model=model,
     )
+    wandb.finish()
 
 if __name__ == "__main__":
     args = parse_arguments()
