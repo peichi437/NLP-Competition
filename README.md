@@ -1,14 +1,14 @@
 # NLP-Competition
-# Requirements
+## Requirements
 torch \
 pandas \
 numpy \
 scikit-learn \
 nltk \
 transformers
-# Models (Put in model_name)
+## Models (Put in model_name)
 Bert, GPT2, Roberta, DistilBert, Luke
-# Execute in your terminal
+## Execute in your terminal
 ```
 python main.py \
     --work_dir {WORK_DIR} \
@@ -22,7 +22,7 @@ python main.py \
     --seed 123 \
 ```
 This will save your training model and submission.
-# Only Predict with the model you've trained.
+## Only Predict with the model you've trained.
 ```
 python main.py \
     --work_dir {WORK_DIR} \
@@ -35,7 +35,7 @@ python main.py \
     --lr 1e-4 \
     --seed 123 \
 ```
-# Our results
+## Our results
 
 |  | Model_name | Q_Accuracy | R_Accuracy |
 |---|------------|------------|:-----------|
