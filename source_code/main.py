@@ -68,10 +68,11 @@ def main(**args):
 
     ##### ENCODING
     try:
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer)
-    except:
         tokenizer_dict = {'Bert':'bert-base-cased', 'DistilBert':'distilbert-base-cased', 'GPT2':'gpt2', 'Roberta':'roberta-base', 'DB2':'distilbert-base-cased'}
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_dict[kwargs.model_name])
+    except:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer) 
+        
         
     args['tokenizer'] = tokenizer
 
