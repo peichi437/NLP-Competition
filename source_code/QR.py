@@ -236,7 +236,7 @@ class QR:
 
         model.load_state_dict(torch.load(os.path.join(self.work_dir, 'models', self.model_name))["model"])
 
-        q_sub_output, r_sub_output, predict_pos = self.predict(model, test_loader)
+        q_sub_output, r_sub_output, predict_pos = self.predict(dataloader=test_loader, model=model)
 
         q_sub, r_sub = get_output_post_fn(test, q_sub_output, r_sub_output)
 
