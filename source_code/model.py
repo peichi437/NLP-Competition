@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer
 from transformers import BertModel, GPT2Model, RobertaModel, DistilBertModel, LukeModel
-from transformers import AdamW
+from transformers import AdamW, GPT2LMHeadModel
 
 import torch
 import torch.nn as nn

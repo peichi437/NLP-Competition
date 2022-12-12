@@ -4,7 +4,6 @@ from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from transformers import AdamW
 
-import wandb
 import numpy as np, pandas as pd
 
 import sys, os
@@ -72,8 +71,6 @@ class QR:
                 print('Epoch {} Batch {} Loss {:.4f}'.format(
                     batch_id + 1, batch_id, running_loss / 50))
 
-                wandb.log({"Batch loss": loss.item()/q_end.shape[0]})
-
             loop.set_description(f'Epoch {epoch}')
             loop.set_postfix(loss=loss.item())
 
@@ -100,7 +97,6 @@ class QR:
                     epoch=epoch
                     )
             valid_loss = self.evaluate(valid_loader, model, loss_fct=loss_fct)
-            wandb.log({"Validation loss":valid_loss})
             if valid_loss < valid_loss_min:
                 valid_loss_min = valid_loss
                 torch.save({"epoch":epoch, "model":model.state_dict()}, os.path.join(self.work_dir, 'models', self.model_name))
@@ -127,7 +123,6 @@ class QR:
 
         print("q accuracy: ", q_acc_sum/test.shape[0])
         print("r accuracy: ", r_acc_sum/test.shape[0])
-        wandb.log({"q_acc":q_acc_sum/test.shape[0], "r_acc":r_acc_sum/test.shape[0]})
 
     def evaluate(self, dataloader, model, loss_fct):
         model.eval()

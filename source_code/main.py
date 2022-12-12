@@ -1,8 +1,6 @@
 import argparse
 import torch
 
-import wandb
-
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
@@ -27,17 +25,15 @@ def parse_arguments(arguments=None):
     parser.add_argument('--train_csv', type=str, default="Batch_answers - train_data (no-blank).csv")
     parser.add_argument('--submit_csv', type=str, default="Batch_answers - test_data(no_label).csv")
     parser.add_argument('--model_name', type=str, default="Bert")
-    parser.add_argument('--tokenizer', type=str, default="")
     parser.add_argument('--bsz', type=int, default=8, help='batch size')
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=3e-5)
     parser.add_argument('--seed', type=int, default=123)
 
     return parser.parse_args(args=arguments)
 
 # MAIN
 def main(**args):
-    os.environ['WANDB_API_KEY'] = "1ce6f52a9031395a3d60863642bcac6ef3d0f3ac"
 
     torch.clear_autocast_cache()
     torch.cuda.empty_cache()
@@ -51,11 +47,6 @@ def main(**args):
     train_csv = kwargs.train_csv
     batch_size = kwargs.bsz
     model_name = kwargs.model_name
-    tokenizer = kwargs.tokenizer
-
-    wandb.init(project="NLP-Competition_E1", entity="pcl43700", name=model_name+"-"+tokenizer)
-    wandb.log(args)
-
 
     # Set Seed
     set_seed_1(seed=seed)
@@ -66,7 +57,7 @@ def main(**args):
 
     ##### LOAD DATA
     df=pd.read_csv(os.path.join(work_dir, train_csv), encoding = "ISO-8859-1")
-    
+
     data = preprocessing(df=df)
 
     ##### SPLIT
@@ -74,12 +65,22 @@ def main(**args):
     valid, test = train_test_split(valid, test_size=0.5)
 
     ##### ENCODING
-    try:
-        tokenizer_dict = {'Bert':'bert-base-cased', 'DistilBert':'distilbert-base-cased', 'GPT2':'gpt2', 'Roberta':'roberta-base', 'DB2':'distilbert-base-cased'}
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_dict[kwargs.model_name])
-    except:
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer) 
-        
+    tokenizer_dict = {
+        'Bert':'bert-base-cased',
+        'DistilBert':'distilbert-base-cased',
+        'GPT2':'gpt2', 'Roberta':'roberta-base',
+        'DB2':'distilbert-base-cased',
+        'Bert_Drop':'bert-base-cased',
+        'DistilBert_Drop':'distilbert-base-cased',
+        'GPT2_Drop':'gpt2', 'Roberta':'roberta-base',
+        'DB2_Drop':'distilbert-base-cased',
+        'Luke':'bert-base-cased',
+        'Luke_Drop':'bert-base-cased',
+        }
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_dict[kwargs.model_name])
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
         
     args['tokenizer'] = tokenizer
 
@@ -128,7 +129,6 @@ def main(**args):
     qr.submit(
         model=model,
     )
-    wandb.finish()
 
 if __name__ == "__main__":
     args = parse_arguments()
