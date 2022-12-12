@@ -1,6 +1,8 @@
 import argparse
 import torch
 
+import wandb
+
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
@@ -25,16 +27,17 @@ def parse_arguments(arguments=None):
     parser.add_argument('--train_csv', type=str, default="Batch_answers - train_data (no-blank).csv")
     parser.add_argument('--submit_csv', type=str, default="Batch_answers - test_data(no_label).csv")
     parser.add_argument('--model_name', type=str, default="Bert")
-    parser.add_argument('--tokenizer', type=str, default="bert-base-cased")
+    parser.add_argument('--tokenizer', type=str, default="")
     parser.add_argument('--bsz', type=int, default=8, help='batch size')
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--lr', type=float, default=3e-5)
-    parser.add_argument('--seed', type=int, default=2022)
+    parser.add_argument('--seed', type=int, default=123)
 
     return parser.parse_args(args=arguments)
 
 # MAIN
 def main(**args):
+    os.environ['WANDB_API_KEY'] = "1ce6f52a9031395a3d60863642bcac6ef3d0f3ac"
 
     torch.clear_autocast_cache()
     torch.cuda.empty_cache()
@@ -49,6 +52,9 @@ def main(**args):
     batch_size = kwargs.bsz
     model_name = kwargs.model_name
     tokenizer = kwargs.tokenizer
+
+    wandb.init(project="NLP-Competition_E1", entity="pcl43700", name=model_name+"-"+tokenizer)
+    wandb.log(args)
 
 
     # Set Seed
@@ -121,6 +127,7 @@ def main(**args):
     qr.submit(
         model=model,
     )
+    wandb.finish()
 
 if __name__ == "__main__":
     args = parse_arguments()

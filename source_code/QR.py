@@ -4,7 +4,7 @@ from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from transformers import AdamW
 
-import os
+import wandb
 import numpy as np, pandas as pd
 
 import sys, os
@@ -24,9 +24,10 @@ class QR:
         self.model_name = args['model_name']
         self.batch_size = args['bsz']
 
-    def train_one_epoch(self, dataloader, model, opt, loss_fct, epoch):
+    def train_one_epoch(self, dataloader, valid_loader, model, opt, loss_fct, epoch):
         running_loss = 0.0
         running_len = 0
+        valid_loss_min = np.inf
         loop = tqdm(dataloader, leave=True)
         for batch_id, batch in enumerate(loop):
             # reset
@@ -71,45 +72,42 @@ class QR:
             if batch_id % 50 == 0 and batch_id != 0:
                 print('Epoch {} Batch {} Loss {:.4f}'.format(
                     batch_id + 1, batch_id, running_loss / 50))
+
+                wandb.log({"Batch loss": loss.item()/q_end.shape[0]})
+
+                valid_loss = self.evaluate(valid_loader, model, loss_fct=loss_fct)
+                wandb.log({"Validation loss":valid_loss})
+                if valid_loss < valid_loss_min:
+                    valid_loss_min = valid_loss
+                    torch.save({"epoch":epoch, "model":model.state_dict()}, os.path.join(self.work_dir, 'models', self.model_name))
+
             loop.set_description(f'Epoch {epoch}')
             loop.set_postfix(loss=loss.item())
 
-        print(f"Training_loss: {running_loss/running_len}")
+        
 
         return model
     
     def fit(self, train_loader, valid_loader, test_loader, test, model):
         if not os.path.exists(os.path.join(self.work_dir, 'models')): os.mkdir(os.path.join(self.work_dir, 'models'))
         # Optim
-        no_decay = ["bias", "LayerNorm.weight"]
-        optimizer_grouped_parameters = [
-                {
-                    "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-                    "weight_decay": 1e-4  # 10^-4 good at mixup paper
-                },
-                {
-                    "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
-                    "weight_decay": 0
-                },
-            ]
-        opt = AdamW(optimizer_grouped_parameters, lr=self.lr)
+        opt = AdamW(model.parameters(), lr=self.lr)
         loss_fct = CrossEntropyLoss(label_smoothing=0.1)
-        valid_loss_min = np.inf
+
         for epoch in range(1, self.epochs+1):
             model.train()
             
             model = self.train_one_epoch(
                     dataloader=train_loader,
+                    valid_loader=valid_loader,
                     model=model,
                     opt=opt,
                     loss_fct=loss_fct,
                     epoch=epoch
                     )
-                
-            valid_loss = self.evaluate(valid_loader, model, loss_fct=loss_fct)
-            if valid_loss < valid_loss_min:
-                valid_loss_min = valid_loss
-                torch.save({"epoch":epoch, "model":model.state_dict()}, os.path.join(self.work_dir, 'models', self.model_name))
+
+
+        model.load_state_dict(torch.load(os.path.join(self.work_dir, 'models', self.model_name))['model'])
                 
         # test
         q_sub_output, r_sub_output, predict_pos = self.predict(test_loader, model)
@@ -130,11 +128,12 @@ class QR:
 
         print("q accuracy: ", q_acc_sum/test.shape[0])
         print("r accuracy: ", r_acc_sum/test.shape[0])
+        wandb.log({"q_acc":q_acc_sum/test.shape[0], "r_acc":r_acc_sum/test.shape[0]})
 
     def evaluate(self, dataloader, model, loss_fct):
         model.eval()
         total_loss, total_len = 0, 0
-        running_loss = 0.0
+        # running_loss = 0.0
 
         with torch.no_grad():
             loop = tqdm(dataloader, leave=True)
@@ -166,14 +165,12 @@ class QR:
 
                 loss = q_start_loss + r_start_loss + q_end_loss + r_end_loss
 
-                running_loss += loss.item()
+                # running_loss += loss.item()
                 total_loss += loss.item() * q_start.shape[0]
                 total_len = q_start.shape[0]
 
-                if batch_id % 30 == 0 and batch_id != 0:
-                    print('Validation Epoch {} Batch {} Loss {:.4f}'.format(
-                        batch_id + 1, batch_id, running_loss / 30))
-                    running_loss = 0.0
+                loop.set_description(f'Evaluate: ')
+                loop.set_postfix(loss=loss.item())
         
         return total_loss/total_len
 
