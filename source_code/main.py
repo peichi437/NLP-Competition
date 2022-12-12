@@ -30,7 +30,7 @@ def parse_arguments(arguments=None):
     parser.add_argument('--tokenizer', type=str, default="")
     parser.add_argument('--bsz', type=int, default=8, help='batch size')
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--lr', type=float, default=3e-5)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--seed', type=int, default=123)
 
     return parser.parse_args(args=arguments)
