@@ -7,7 +7,9 @@ scikit-learn \
 nltk \
 transformers
 ## Models (Put in model_name)
-Bert, GPT2, Roberta, DistilBert, Luke
+Bert, GPT2, Roberta, DistilBert, Luke, Bert_Drop, GPT2_Drop, Roberta_Drop, DistilBert_Drop, Luke_Drop, DB2
+
+* DB2: DistilBert + Bert -> Fc_transfer
 ## Execute in your terminal
 ```
 python main.py \
