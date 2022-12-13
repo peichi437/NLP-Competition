@@ -158,7 +158,7 @@ python main.py \
 | Luke_Drop-label-smth0.1       | 0.55035        | 0.55812        | 10529.950           |
 | GPT2_Drop-label-smth0.1       | **0.60799**    | **0.58301**    | 10932.034           |
 
-# The best one
+## The best one
 
 - For Q Accuracy
    - GPT-2 with Dropout(0.5) while Learning Rate = 1e-4
