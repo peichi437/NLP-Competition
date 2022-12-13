@@ -1,8 +1,11 @@
 import argparse
 import torch
 
+# import wandb
+
 from sklearn.model_selection import train_test_split
-from transformers import AutoTokenizer
+import transformers
+from transformers import AutoTokenizer, GPT2Tokenizer
 
 import sys, os
 sys.path.insert(1, os.path.join(sys.path[0], "../source_code"))
@@ -21,7 +24,7 @@ def parse_arguments(arguments=None):
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work_dir', type=str, default="C:\\Users\\user\\Documents\\Competition")
+    parser.add_argument('--work_dir', type=str, default="D:\\Competition")
     parser.add_argument('--train_csv', type=str, default="Batch_answers - train_data (no-blank).csv")
     parser.add_argument('--submit_csv', type=str, default="Batch_answers - test_data(no_label).csv")
     parser.add_argument('--model_name', type=str, default="Bert")
@@ -34,6 +37,7 @@ def parse_arguments(arguments=None):
 
 # MAIN
 def main(**args):
+    # os.environ['WANDB_API_KEY'] = ""
 
     torch.clear_autocast_cache()
     torch.cuda.empty_cache()
@@ -47,6 +51,10 @@ def main(**args):
     train_csv = kwargs.train_csv
     batch_size = kwargs.bsz
     model_name = kwargs.model_name
+
+    # wandb.init(project="NLP-Competition_E1", entity="pcl43700", name=model_name)
+    # wandb.log(args)
+
 
     # Set Seed
     set_seed_1(seed=seed)
@@ -64,6 +72,8 @@ def main(**args):
     train, valid = train_test_split(data, test_size=0.2)
     valid, test = train_test_split(valid, test_size=0.5)
 
+    transformers.logging.set_verbosity_error()
+
     ##### ENCODING
     tokenizer_dict = {
         'Bert':'bert-base-cased',
@@ -72,15 +82,16 @@ def main(**args):
         'DB2':'distilbert-base-cased',
         'Bert_Drop':'bert-base-cased',
         'DistilBert_Drop':'distilbert-base-cased',
-        'GPT2_Drop':'gpt2', 'Roberta':'roberta-base',
+        'GPT2_Drop':'gp2', 'Roberta_Drop':'roberta-base',
         'DB2_Drop':'distilbert-base-cased',
         'Luke':'bert-base-cased',
         'Luke_Drop':'bert-base-cased',
         }
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_dict[kwargs.model_name])
-
-    if tokenizer.pad_token is None:
+    if kwargs.model_name == "GPT2":
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
         tokenizer.pad_token = tokenizer.eos_token
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_dict[kwargs.model_name])
         
     args['tokenizer'] = tokenizer
 
@@ -129,6 +140,7 @@ def main(**args):
     qr.submit(
         model=model,
     )
+    # wandb.finish()
 
 if __name__ == "__main__":
     args = parse_arguments()
