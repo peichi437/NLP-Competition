@@ -39,6 +39,7 @@ python main.py \
 
 ### No Dropout and Label Smoothing
 * Learning Rate=3e-5
+
 | Model Name | Q Accuracy | R Accuracy | Validation Loss |
 |------------|------------|------------|:----------------|
 | Bert       | 0.59069    | 0.56575    | 7128.481        |
@@ -50,6 +51,7 @@ python main.py \
 
 ### Dropout without Label Smoothing
 * Learning_Rate=3e-5
+
 | Model Name      | Q Accuracy | R Accuracy | Validation Loss |
 |-----------------|------------|------------|:----------------|
 | Bert_Drop       | 0.59089    | 0.56970    | 7120.010        |
