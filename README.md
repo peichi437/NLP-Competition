@@ -36,7 +36,7 @@ python main.py \
     --seed 123 \
 ```
 
-## Our results
+## Our results (Epochs=1)
 
 ### No Dropout and Label Smoothing
 * Learning Rate=3e-5
