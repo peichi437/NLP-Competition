@@ -78,12 +78,13 @@ def main(**args):
     tokenizer_dict = {
         'Bert':'bert-base-cased',
         'DistilBert':'distilbert-base-cased',
-        'GPT2':'gpt2', 'Roberta':'roberta-base',
+        'GPT2':'gpt2',
+        'Roberta':'roberta-base',
         'DB2':'distilbert-base-cased',
         'Bert_Drop':'bert-base-cased',
         'DistilBert_Drop':'distilbert-base-cased',
-        'GPT2_Drop':'gp2', 'Roberta_Drop':'roberta-base',
-        'DB2_Drop':'distilbert-base-cased',
+        'GPT2_Drop':'gpt2',
+        'Roberta_Drop':'roberta-base',
         'Luke':'bert-base-cased',
         'Luke_Drop':'bert-base-cased',
         }
