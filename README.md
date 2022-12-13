@@ -15,10 +15,9 @@ python main.py \
     --train_csv {TRAIN_CSV} \
     --submit_csv {SUBMIT_CSV} \
     --model_name {Model} \
-    --tokenizer {Tokenizer} \
     --bsz 8 \
     --epochs 1 \
-    --lr 1e-4 \
+    --lr 3e-5 \
     --seed 123 \
 ```
 This will save your training model and submission.
@@ -29,12 +28,12 @@ python main.py \
     --train_csv {TRAIN_CSV} \
     --submit_csv {SUBMIT_CSV} \
     --model_name {Model} \
-    --tokenizer {Tokenizer} \
     --bsz 8 \
     --epochs 1 \
-    --lr 1e-4 \
+    --lr 3e-5 \
     --seed 123 \
 ```
+
 ## Our results
 
 ### No Dropout and Label Smoothing
